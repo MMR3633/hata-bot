@@ -69,6 +69,24 @@ async def test_duel_between_two(client):
     await b.close()
 
 
+async def test_ready_during_friends_solo(client):
+    t1, t2 = await login(client, RASUL, "Расул"), await login(client, LERA, "Лера")
+    a = await client.ws_connect(f"/ws?t={t1}")
+    b = await client.ws_connect(f"/ws?t={t2}")
+    await recv_until(a, "state")
+    await recv_until(b, "state")
+    await a.send_json({"t": "duel_solo"})
+    assert (await recv_until(b, "duel_start"))["duel"]["players"] == [RASUL]
+    await b.send_json({"t": "duel_ready"})
+    assert (await recv_until(a, "ready"))["ready"] == [LERA]
+    await recv_until(a, "duel_end", limit=40)
+    await a.send_json({"t": "duel_ready"})
+    start = await recv_until(b, "duel_start", limit=40)
+    assert start["duel"]["players"] == sorted([RASUL, LERA])
+    await a.close()
+    await b.close()
+
+
 async def test_watch_sync_and_chat(client):
     t1, t2 = await login(client, RASUL, "Расул"), await login(client, LERA, "Лера")
     a = await client.ws_connect(f"/ws?t={t1}")

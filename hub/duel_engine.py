@@ -17,7 +17,7 @@ def _imul(a, b):
 
 
 class Rng:
-    """mulberry32, побитово совпадает с webapp/js/shapes.js"""
+    """mulberry32, побитово совпадает с webapp/js/engine.js"""
 
     def __init__(self, seed):
         self.a = seed & U32

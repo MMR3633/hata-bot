@@ -25,15 +25,15 @@
 }
 
 /* ---------- лобби ---------- */
-.dl-lobby { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+.dl-lobby { display: flex; flex-direction: column; gap: 12px; }
 
 .dl-hero { text-align: center; }
-.dl-deco { display: inline-grid; grid-template-columns: repeat(3, 18px); gap: 3px; margin: 6px 0 10px;
+.dl-deco { display: inline-grid; grid-template-columns: repeat(3, 15px); gap: 3px; margin: 2px 0 8px;
   transform: rotate(-8deg); animation: dl-float 4s ease-in-out infinite; }
-.dl-deco i { width: 18px; height: 18px; display: block; }
+.dl-deco i { width: 15px; height: 15px; display: block; }
 .dl-title { margin: 0; font-size: 32px; font-weight: 850; letter-spacing: -.5px; line-height: 1.1;
   background: linear-gradient(90deg, #ffd43b, #ff9f43 45%, #ff5f6d); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.dl-sub { margin: 8px auto 0; max-width: 330px; font-size: 14px; }
+.dl-sub { margin: 6px auto 0; max-width: 330px; font-size: 14px; }
 
 .dl-players { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
 .dl-vs { font-weight: 900; font-size: 15px; color: var(--muted); letter-spacing: 1px; }
@@ -90,9 +90,9 @@
 .dl-score { font-size: 32px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; display: inline-block;
   transform-origin: left center; }
 .dl-score.bump, .dl-oscore.bump { animation: dl-bump .35s ease-out; }
-.dl-streak { display: inline-block; vertical-align: 6px; margin-left: 10px; font-size: 11px; font-weight: 800; color: #2a1a00; padding: 2px 8px;
+.dl-streak { display: block; width: max-content; margin-top: 1px; font-size: 11px; font-weight: 800; color: #2a1a00; padding: 2px 8px;
   border-radius: 99px; background: linear-gradient(90deg, #ffd43b, #ff9f43); box-shadow: 0 0 12px rgba(255, 159, 67, .45); }
-.dl-streak.bump { animation: dl-bump .4s ease-out; }
+.dl-streak.bump { animation: dl-bump .4s ease-out; transform-origin: left center; }
 
 .dl-timer { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; padding: 6px 12px; border-radius: 12px;
   background: var(--panel); border: 1px solid var(--line); transition: color .3s, border-color .3s; }

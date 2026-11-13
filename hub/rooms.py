@@ -80,20 +80,25 @@ class Hub:
 
     # ---------- дуэль ----------
 
+    def duel_running(self):
+        return self.duel is not None and not self.duel.over
+
     async def on_duel_ready(self, uid, msg):
-        if self.duel and not self.duel.over:
+        # во время чужой тренировки готовность копится, дуэль стартует, когда готовы оба
+        if self.duel_running() and uid in self.duel.players:
             return
         if msg.get("on", True):
             self.ready.add(uid)
         else:
             self.ready.discard(uid)
         await self.broadcast({"t": "ready", "ready": sorted(self.ready)})
-        if len(self.ready) >= 2:
+        if len(self.ready) >= 2 and not self.duel_running():
             await self.start_duel(sorted(self.ready))
 
     async def on_duel_solo(self, uid, msg):
-        if self.duel and not self.duel.over:
+        if self.duel_running():
             return
+        self.ready.discard(uid)
         await self.start_duel([uid])
 
     async def start_duel(self, players):

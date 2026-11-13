@@ -345,7 +345,7 @@ function paint() {
   clearInterval(timer);
   if (S.view === 'game') {
     timer = setInterval(tick, 250);
-    window.scrollTo(0, 0);
+    if (el.game.offsetParent) window.scrollTo(0, 0);
     fit();
     renderGame();
   } else {
@@ -410,7 +410,6 @@ function commit(slot, row, col) {
   const g = S.me;
   const shape = shapes[g.tray[slot]];
   if (!canMove() || !fits(g.board, SIZE, shape, row, col)) return false;
-  const before = copyGame(g, g.miss);
   const id = ++S.seq;
   if (!ctx.send({t: 'duel_move', slot, row, col, id})) {
     ctx.toast('Нет связи с Хатой');
@@ -435,7 +434,7 @@ function commit(slot, row, col) {
   }
   popup(res.points, res.lines, row, col, shape);
   renderGame();
-  if (g.finished && !before.finished) ctx.haptic('warning');
+  if (g.finished) ctx.haptic('warning');
   return true;
 }
 

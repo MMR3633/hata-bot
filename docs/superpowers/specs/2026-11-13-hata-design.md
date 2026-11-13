@@ -42,7 +42,8 @@ Mini App: `webapp/index.html` + `webapp/js/*.js` (vanilla JS), вкладки М
 
 `agent.py`: опрашивает хаб, выполняет команды, шлёт статус каждые 15 с.
 Команды: `start`, `stop`, `create_world {name, seed, type}`, `switch_world {name}`, `backup`, `list_worlds`.
-Сервер: Paper, Java 21, `-Xmx3G`, RCON на 127.0.0.1 для статуса и команд.
+Сервер: Paper 26.3 (последний stable на 13.11.2026), Java 25 (Temurin JRE в `HataMC\java`), `-Xmx3G`, RCON на 127.0.0.1 для статуса и команд.
+Датапак высоты собирается из ванильного `dimension_type/overworld.json` внутри jar Paper (формат в 26.x другой, руками не писать).
 
 ## Правила
 
