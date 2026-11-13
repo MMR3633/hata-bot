@@ -159,12 +159,23 @@ class Agent:
                 self.run_cmd(c)
 
 
+def single_instance(port=47662):
+    lock = socket.socket()
+    try:
+        lock.bind(("127.0.0.1", port))
+    except OSError:
+        sys.exit("агент уже запущен")
+    return lock
+
+
 def main():
+    _lock = single_instance()
     ROOT.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
                         handlers=[logging.FileHandler(ROOT / "agent.log", encoding="utf-8"),
                                   logging.StreamHandler(sys.stdout)])
     env = load_env(ROOT / "agent.env")
+    env.update({k.removeprefix("HATA_"): v for k, v in os.environ.items() if k.startswith("HATA_") and k != "HATA_MC_ROOT"})
     missing = [k for k in ("HUB_URL", "AGENT_TOKEN", "RCON_PASSWORD") if not env.get(k)]
     if missing:
         sys.exit(f"в {ROOT / 'agent.env'} не хватает: {', '.join(missing)}")
