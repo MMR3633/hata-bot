@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Хата</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/duel.css">
+  <link rel="stylesheet" href="/css/watch.css">
+</head>
+<body>
+  <div id="gate" class="gate">
+    <div class="gate-logo">🏠</div>
+    <div class="gate-title">Хата</div>
+    <div id="gate-msg" class="gate-msg">Захожу…</div>
+  </div>
+
+  <main id="app" hidden>
+    <header class="top">
+      <div class="brand">🏠 Хата</div>
+      <div id="presence" class="presence"></div>
+    </header>
+
+    <section id="tab-duel" class="tab" data-tab="duel"></section>
+    <section id="tab-watch" class="tab" data-tab="watch" hidden></section>
+    <section id="tab-mc" class="tab" data-tab="mc" hidden></section>
+    <section id="tab-stats" class="tab" data-tab="stats" hidden></section>
+
+    <nav class="tabs">
+      <button data-go="duel" class="on"><span>🧩</span>Дуэль</button>
+      <button data-go="watch"><span>🎬</span>Кино</button>
+      <button data-go="mc"><span>⛏</span>Майн</button>
+      <button data-go="stats"><span>🏆</span>Счёт</button>
+    </nav>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
