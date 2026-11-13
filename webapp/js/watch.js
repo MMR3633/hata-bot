@@ -8,13 +8,14 @@ const DRIFT = 2;           // расхождение (с), после котор
 const TICK_MS = 500;
 const RECONCILE_MS = 5000;
 const JOIN_CHECK_MS = 2500;
+const SETTLE_MS = 3000;
 
 let ctx, root;
 const ui = {};
 let shared = null;          // {src, id, title, playing, pos, at, by}
 let setBy = null;           // кто включил текущее видео
 let player = null, playerKey = '';
-let quietUntil = 0, last = null, lastReconcile = 0;
+let quietUntil = 0, last = null, lastReconcile = 0, lastActivity = 0;
 let pendingPlay = false, joinTimer = null;
 let srcPref = 'yt', searchOpen = false, searchSeq = 0;
 
@@ -84,6 +85,7 @@ function ytPlayer(box, ev) {
             onReady: () => { a.ready = true; ev.ready(); },
             onStateChange: e => {
               state = e.data;
+              ev.activity();
               if (e.data === 1) ev.play();
               else if (e.data === 2) ev.pause();
             },
@@ -106,9 +108,10 @@ function ytPlayer(box, ev) {
   return a;
 }
 
-// RuTube: управление через postMessage, ответы — JSON-строки {type, data}
+// RuTube: управление через postMessage, ответы — JSON-строки {type, data}.
+// Перед роликом бывает реклама (state 'advert'): в это время позицию не трогаем.
 function rutubePlayer(box, ev) {
-  let fr = null, state = '', want = false, t = 0, tAt = 0, fallback = null;
+  let fr = null, state = '', want = false, ad = false, afterAd = false, t = 0, tAt = 0, fallback = null;
   const post = (type, data = {}) => fr?.contentWindow?.postMessage(JSON.stringify({type, data}), '*');
   const markReady = () => { if (!a.ready) { a.ready = true; clearTimeout(fallback); ev.ready(); } };
   const onMsg = e => {
@@ -120,12 +123,26 @@ function rutubePlayer(box, ev) {
     if (m.type === 'player:ready' || m.type === 'player:init') markReady();
     else if (m.type === 'player:currentTime') {
       const v = Number(d.time ?? d.currentTime);
-      if (Number.isFinite(v)) { t = v; tAt = nowMs(); }
+      if (Number.isFinite(v) && !ad) { t = v; tAt = nowMs(); }
     } else if (m.type === 'player:changeState') {
+      const st = d.state || d.status;
+      ev.activity();
+      if (st === 'advert') {
+        ad = !['end', 'complete', 'completed', 'skip'].includes(d.phase);
+        afterAd = true;
+        if (d.isPlaying) want = true;
+        return;
+      }
+      if (ad && (st === 'pause' || st === 'paused')) return;   // ролик ждёт конца рекламы
       const prev = state;
       t = a.getTime(); tAt = nowMs();
-      state = d.state;
-      if (state === 'playing') { want = true; if (prev !== 'playing') ev.play(); }
+      state = st;
+      if (state === 'playing') {
+        ad = false; want = true;
+        // после рекламы ролик надо догнать до общего места
+        if (prev !== 'playing' || afterAd) ev.play(afterAd);
+        afterAd = false;
+      }
       else if (state === 'pause' || state === 'paused') { want = false; ev.pause(); }
       else if (state === 'completed' || state === 'stopped') want = false;
     } else if (m.type === 'player:error') ev.error('RuTube: ' + (d.message || 'ошибка плеера'));
@@ -141,9 +158,11 @@ function rutubePlayer(box, ev) {
     },
     play() { post('player:play'); },
     pause() { post('player:pause'); },
-    seek(sec) { post('player:setCurrentTime', {time: sec}); t = sec; tAt = nowMs(); },
-    getTime: () => t + (state === 'playing' ? (nowMs() - tAt) / 1000 : 0),
+    // время не подменяем: плеер может проигнорировать команду, правду скажет player:currentTime
+    seek(sec) { post('player:setCurrentTime', {time: sec}); },
+    getTime: () => t + (state === 'playing' && !ad ? (nowMs() - tAt) / 1000 : 0),
     isPlaying: () => want,
+    busy: () => ad,
     title: () => '',
     destroy() { clearTimeout(fallback); window.removeEventListener('message', onMsg); },
   };
@@ -168,16 +187,16 @@ function vkPlayer(box, ev) {
         api = window.VK?.VideoPlayer?.(fr);
         if (!api) throw new Error('VK.VideoPlayer');
         api.on('inited', () => { clearTimeout(timer); a.ready = true; ev.ready(); });
-        api.on('started', () => { state = 'playing'; ev.play(); });
-        api.on('resumed', () => { state = 'playing'; ev.play(); });
-        api.on('paused', () => { state = 'paused'; ev.pause(); });
+        api.on('started', () => { state = 'playing'; ev.activity(); ev.play(); });
+        api.on('resumed', () => { state = 'playing'; ev.activity(); ev.play(); });
+        api.on('paused', () => { state = 'paused'; ev.activity(); ev.pause(); });
         api.on('ended', () => { state = 'ended'; });
         api.on('timeupdate', d => { const v = Number(d?.time); if (Number.isFinite(v)) { t = v; tAt = nowMs(); } });
       }).catch(limit);
     },
     play() { try { api?.play(); } catch (e) {} },
     pause() { try { api?.pause(); } catch (e) {} },
-    seek(sec) { try { api?.seek(sec); t = sec; tAt = nowMs(); } catch (e) {} },
+    seek(sec) { try { api?.seek(sec); } catch (e) {} },
     getTime() {
       try { const v = Number(api?.getCurrentTime()); if (Number.isFinite(v)) return v; } catch (e) {}
       return t + (state === 'playing' ? (nowMs() - tAt) / 1000 : 0);
@@ -207,10 +226,18 @@ function openPlayer(w) {
   if (!make) return;
   const p = make(ui.frame, {
     ready: () => { if (p === player) { renderInfo(); sync(); } },
-    play: () => { if (p === player) { pendingPlay = false; ui.overlay.hidden = true; renderInfo(); onLocal('play'); } },
+    play: afterAd => {
+      if (p !== player) return;
+      const joining = pendingPlay || afterAd;
+      pendingPlay = false;
+      ui.overlay.hidden = true;
+      renderInfo();
+      onLocal('play', joining);
+    },
     pause: () => { if (p === player) onLocal('pause'); },
     error: text => { if (p === player) { ui.stage.classList.add('err'); ui.loading.textContent = text; } },
     limited: () => { if (p === player) { ui.limited.hidden = false; } },
+    activity: () => { if (p === player) lastActivity = nowMs(); },
   });
   player = p;
   ui.loading.textContent = 'Загружаю плеер…';
@@ -234,6 +261,7 @@ function applyWatch(w, fromState) {
 async function sync() {
   const p = player;
   if (!p?.ready || p.limited || !shared?.id) return;
+  if (p.busy?.()) { if (!shared.playing) { quiet(); p.pause(); } return; }
   const exp = expected();
   const t = await p.getTime();
   if (p !== player) return;
@@ -245,10 +273,12 @@ async function sync() {
 }
 
 // браузер мог не дать стартовать без касания — тогда большая кнопка
-function checkJoin(p) {
+function checkJoin(p, tries = 4) {
   clearTimeout(joinTimer);
   joinTimer = setTimeout(() => {
-    if (p === player && shared?.playing && !p.isPlaying()) ui.overlay.hidden = false;
+    if (p !== player || !shared?.playing || p.isPlaying()) return;
+    if (p.busy?.() && tries > 1) checkJoin(p, tries - 1);   // реклама ещё грузится
+    else ui.overlay.hidden = false;
   }, JOIN_CHECK_MS);
 }
 
@@ -269,25 +299,33 @@ function joinNow() {
 function control(playing, pos) {
   shared = {...shared, playing, pos, at: ctx.serverNow(), by: ctx.me};
   ctx.send({t: 'watch_ctl', playing, pos: Math.round(pos * 10) / 10});
-  last = null;
+  last = {t: pos, now: nowMs(), playing};
   renderInfo();
 }
 
 // событие плеера: отличаем действия человека от наших собственных команд
-async function onLocal(kind) {
+// joining: старт, который запросили мы сами (автозапуск, кнопка, конец рекламы)
+async function onLocal(kind, joining = false) {
   const p = player;
-  if (!shared?.id || nowMs() < quietUntil || document.hidden) return;
+  if (!shared?.id || document.hidden) return;
+  if (nowMs() < quietUntil && !joining) return;
   const t = await p.getTime();
   if (p !== player) return;
   if (kind === 'play') {
     if (shared.playing) {
-      // подключился к уже идущему просмотру — догоняем, никому не шлём
-      if (!p.isLive?.() && Math.abs(t - expected()) > DRIFT) { quiet(); p.seek(expected()); }
+      // перемотку во время просмотра ловит tick(); здесь только догоняем общий просмотр
+      if (joining && !p.isLive?.() && Math.abs(t - expected()) > DRIFT) {
+        quiet();
+        p.seek(expected());
+        setTimeout(sync, 1500);   // RuTube сразу после рекламы может проглотить перемотку
+      }
       return;
     }
+    if (nowMs() < quietUntil) return;
     control(true, t);
   } else if (kind === 'pause') {
-    if (pendingPlay || !shared.playing) return;   // автозапуск не удался — это не пауза человека
+    // pendingPlay: автозапуск не удался — это не пауза человека
+    if (nowMs() < quietUntil || pendingPlay || !shared.playing) return;
     control(false, t);
   }
 }
@@ -295,7 +333,7 @@ async function onLocal(kind) {
 // раз в полсекунды: ловим перемотку и мягко правим расхождение
 async function tick() {
   const p = player;
-  if (!p?.ready || p.limited || !shared?.id || document.hidden) { last = null; return; }
+  if (!p?.ready || p.limited || !shared?.id || document.hidden || p.busy?.()) { last = null; return; }
   const t = await p.getTime();
   if (p !== player) return;
   const now = nowMs(), playing = p.isPlaying(), live = !!p.isLive?.();
@@ -303,13 +341,15 @@ async function tick() {
   // в прямом эфире перемотки нет — синхронизируем только паузу
   if (!live && last && now - last.now < 2000) {
     const predicted = last.t + (last.playing ? (now - last.now) / 1000 : 0);
-    if (Math.abs(t - predicted) > DRIFT) {
+    // скачок туда, где и так должен быть общий просмотр, — это наша же подстройка
+    if (Math.abs(t - predicted) > DRIFT && Math.abs(t - expected()) > DRIFT) {
       control(playing, t);
       last = {t, now, playing};
       return;
     }
   }
-  if (now - lastReconcile > RECONCILE_MS) {
+  // плеер только что сменил состояние (например, буферизуется после нажатия ▶) — не мешаем
+  if (now - lastReconcile > RECONCILE_MS && now - lastActivity > SETTLE_MS) {
     lastReconcile = now;
     const exp = expected();
     if (!live && shared.playing && playing && Math.abs(t - exp) > DRIFT + 1) { quiet(); p.seek(exp); }
@@ -468,7 +508,7 @@ function build() {
   const txt = h('div', 'wt-info-text');
   ui.title = h('div', 'wt-title');
   ui.by = h('div', 'wt-by muted');
-  ui.limited = h('div', 'wt-limited', 'синхронизация VK ограничена — ставьте на паузу вручную');
+  ui.limited = h('div', 'wt-limited', 'Синхронизация VK ограничена, паузу ставьте вручную');
   ui.limited.hidden = true;
   txt.append(ui.title, ui.by, ui.limited);
   ui.find = h('button', 'wt-find', '🔎 Найти другое');
@@ -482,7 +522,7 @@ function build() {
 
   ui.hero = h('div', 'wt-hero');
   ui.hero.append(h('div', 'wt-hero-title', '🎬 Кино вместе'),
-    h('div', 'muted', 'Найди видео или вставь ссылку — оно включится у обоих одновременно'));
+    h('div', 'muted', 'Найди видео или вставь ссылку, и оно включится у обоих одновременно'));
 
   ui.search = h('form', 'wt-search');
   const bar = h('div', 'wt-sbar');

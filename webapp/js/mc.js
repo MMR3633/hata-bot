@@ -9,6 +9,7 @@ const CMD = {
   start: 'Запуск', stop: 'Стоп', create_world: 'Новый мир', switch_world: 'Смена мира',
   backup: 'Бэкап', delete_world: 'Удаление мира',
 };
+const TYPES = {normal: 'обычный', flat: 'плоский', amplified: 'горы'};
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 
 export function mount(el, c) {
@@ -93,7 +94,7 @@ function render(st) {
     box.innerHTML = `
       <h3><span class="status-dot"></span>Ноут спит</h3>
       <div class="muted">Агент на ноуте не на связи${st.seen ? ' · был ' + ago(st.seen) : ''}.
-      Майнкрафт живёт на ноуте Расула — когда ноут включён, сервер можно запустить отсюда.</div>`;
+      Майнкрафт живёт на ноуте Расула. Когда ноут включён, сервер можно запустить отсюда.</div>`;
   } else {
     const [dot, label] = STATE[s.server] || ['', s.server || '?'];
     const running = s.server === 'running';
@@ -119,18 +120,18 @@ function render(st) {
   const worlds = s.worlds || [];
   root.querySelector('#mc-worlds').innerHTML = worlds.length ? worlds.map(w => `
     <div class="list-item ${w.name === s.world ? 'current' : ''}">
-      <div><b>${esc(w.name)}</b><div class="muted" style="font-size:12px">${esc(w.type || '')} · ${w.size_mb ?? '?'} МБ${w.backups ? ` · бэкапов ${w.backups}` : ''}</div></div>
+      <div><b>${esc(w.name)}</b><div class="muted" style="font-size:12px">${esc(TYPES[w.type] || w.type || '')} · ${w.size_mb ?? '?'} МБ${w.backups ? ` · бэкапов ${w.backups}` : ''}</div></div>
       <div class="row">
         ${w.name === s.world ? '<span class="muted" style="font-size:12px">текущий</span>'
           : `<button class="btn" data-cmd="switch_world" data-world="${esc(w.name)}">Играть</button>
              <button class="btn danger" data-cmd="delete_world" data-world="${esc(w.name)}" aria-label="Удалить">✕</button>`}
       </div>
-    </div>`).join('') : `<div class="muted">${st.laptop === 'sleeping' ? 'Список появится, когда ноут проснётся' : 'Пока ни одного мира — создай ниже'}</div>`;
+    </div>`).join('') : `<div class="muted">${st.laptop === 'sleeping' ? 'Список появится, когда ноут проснётся' : 'Пока ни одного мира, создай ниже'}</div>`;
 
   root.querySelector('#mc-log').innerHTML = (st.recent || []).map(r => {
     const res = r.result;
     const mark = res ? (res.ok ? '✅' : '❌') : (r.taken ? '⏳' : '🕓');
-    const note = res && !res.ok ? ` — ${esc(res.error || 'ошибка')}` : '';
+    const note = res && !res.ok ? `: ${esc(res.error || 'ошибка')}` : '';
     return `<div class="list-item"><span>${mark} ${esc(CMD[r.cmd] || r.cmd)}${r.args?.name ? ' «' + esc(r.args.name) + '»' : ''}${note}</span><span class="muted" style="font-size:12px">${ago(r.created)}</span></div>`;
   }).join('') || '<div class="muted">Пусто</div>';
 }

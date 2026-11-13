@@ -121,7 +121,7 @@ function buildLobby() {
         <i class="dl-b k4"></i><i class="dl-b k7"></i><i class="dl-b k1"></i>
       </div>
       <h1 class="dl-title">Блок-дуэль</h1>
-      <p class="dl-sub muted">3 минуты, одинаковые фигуры у обоих. Собирай линии, держи серию — кто больше наберёт, тот и прав.</p>
+      <p class="dl-sub muted">3 минуты, одинаковые фигуры у обоих. Собирай линии, держи серию. Кто больше наберёт, тот и прав.</p>
     </div>
     <div class="dl-result" hidden>
       <div class="dl-res-title"></div>
@@ -205,16 +205,16 @@ function renderLobby() {
   const btn = el.lobby.querySelector('.dl-ready');
   btn.textContent = meReady ? (frReady ? 'Начинаем…' : 'Жду друга…') : (r && !r.solo ? 'Реванш' : 'Готов');
   btn.classList.toggle('waiting', meReady);
-  btn.disabled = !!busy;
+  btn.disabled = false;
   el.lobby.querySelector('.dl-solo').disabled = !!busy;
   el.lobby.querySelector('.dl-solo').textContent = r && r.solo ? 'Ещё тренировка' : 'Тренировка одному';
 
   const hint = el.lobby.querySelector('.dl-hint');
   let text = '', cls = 'dl-hint';
-  if (busy) { text = 'Друг тренируется — дождись конца его раунда'; }
-  else if (fr == null) { text = 'Второго игрока пока нет — можно потренироваться'; }
-  else if (!frOnline) { text = 'Друг не в Хате — позови его'; cls += ' warn'; }
-  else if (frReady && !meReady) { text = 'Друг уже готов — жми «Готов»!'; cls += ' go'; }
+  if (busy) { text = meReady ? 'Друг тренируется. Дуэль начнётся сразу после его раунда' : 'Друг тренируется. Жми «Готов», и дуэль начнётся после его раунда'; }
+  else if (fr == null) { text = 'Второго игрока пока нет, можно потренироваться'; }
+  else if (!frOnline) { text = 'Друг не в Хате, позови его'; cls += ' warn'; }
+  else if (frReady && !meReady) { text = 'Друг уже готов, жми «Готов»!'; cls += ' go'; }
   else if (meReady && !frReady) { text = 'Как только друг нажмёт «Готов», начнём'; }
   hint.className = cls;
   hint.textContent = text;
@@ -297,7 +297,7 @@ function renderMine() {
   if (showOver) {
     over.querySelector('.dl-over-title').textContent = S.timeUp && !g.finished ? 'Время!' : 'Ходов нет';
     over.querySelector('.dl-over-sub').textContent = S.oppUid != null
-      ? `Твой счёт ${g.score} — ждём конца раунда` : `Твой счёт ${g.score}`;
+      ? `Твой счёт ${g.score}. Ждём конца раунда` : `Твой счёт ${g.score}`;
   }
 }
 
