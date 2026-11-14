@@ -22,11 +22,20 @@ async def site(aiohttp_server):
     return await aiohttp_server(app)
 
 
+FRAMES = {}
+
+
 async def next_of(ws, kind, binary=False, limit=60):
+    # кадры, пришедшие пока ждём другое сообщение, запоминаем: на статичной странице новых не будет
+    if binary and FRAMES.get(id(ws)):
+        return FRAMES.pop(id(ws))
     for _ in range(limit):
         msg = await asyncio.wait_for(ws.receive(), 20)
-        if binary and msg.type.name == "BINARY":
-            return msg.data
+        if msg.type.name == "BINARY":
+            if binary:
+                return msg.data
+            FRAMES[id(ws)] = msg.data
+            continue
         if not binary and msg.type.name == "TEXT":
             data = msg.json()
             if data["t"] == kind and (kind != "nav" or "about:blank" not in data["url"]):
