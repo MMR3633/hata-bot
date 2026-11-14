@@ -7,14 +7,17 @@ if (fs.existsSync(envPath)) for (const l of fs.readFileSync(envPath, 'utf8').rep
 const {open} = require('C:/Users/USER/TgMirror/tools/bothost/bhlib.js');
 const E = Object.fromEntries(fs.readFileSync('C:/Users/USER/Hata/.env', 'utf8').split(/\r?\n/).filter(l => l.includes('='))
   .map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]));
-const envs = [['ALLOWED_IDS', E.ALLOWED_IDS], ['AGENT_TOKEN', E.AGENT_TOKEN], ['DATA_DIR', '/app/data'],
-  ['PORT', '8080'], ['PUBLIC_URL', 'https://hata.bothost.tech']];
+const NAME = process.env.BH_NAME || 'hata', BRANCH = process.env.BH_BRANCH || 'dev';
+const DOMAIN = NAME + '.bothost.tech';
+const envs = NAME === 'hata'
+  ? [['ALLOWED_IDS', E.ALLOWED_IDS], ['AGENT_TOKEN', E.AGENT_TOKEN], ['DATA_DIR', '/app/data'], ['PORT', '8080'], ['PUBLIC_URL', 'https://hata.bothost.tech']]
+  : [['ALLOWED_IDS', E.ALLOWED_IDS], ['PORT', '8080']];
 
 (async () => {
   const {b, pg} = await open();
   console.log('logged', !pg.url().includes('login'));
   await pg.goto('https://bothost.ru/create-bot.php', {waitUntil: 'networkidle2', timeout: 60000});
-  await pg.type('input[name=name]', 'hata');
+  await pg.type('input[name=name]', NAME);
   await pg.evaluate(() => {
     for (const [n, v] of [['platform', 'telegram'], ['library', 'aiogram'], ['location', 'eu']]) {
       const r = document.querySelector(`input[name=${n}][value=${v}]`);
@@ -36,16 +39,16 @@ const envs = [['ALLOWED_IDS', E.ALLOWED_IDS], ['AGENT_TOKEN', E.AGENT_TOKEN], ['
     await vals[i].evaluate((el, v) => { el.value = v; el.dispatchEvent(new Event('input', {bubbles: true})); }, envs[i][1]);
   }
   await pg.type('input[name=git_url]', 'https://github.com/MMR3633/hata-bot.git');
-  await pg.evaluate(() => { const br = document.querySelector('input[name=branch]'); if (br) br.value = 'dev'; });
+  await pg.evaluate((b) => { const br = document.querySelector('input[name=branch]'); if (br) br.value = b; }, BRANCH);
   const adv = await pg.evaluateHandle(() => [...document.querySelectorAll('button,a,summary,div')]
     .find(x => x.children.length < 4 && /Дополнительные настройки/.test(x.innerText || '')));
   if (adv) { try { await adv.click(); } catch (e) {} await new Promise(r => setTimeout(r, 500)); }
   await pg.evaluate(() => { const w = document.querySelector('input[name=has_web_interface]'); if (w && !w.checked) w.click(); });
   await new Promise(r => setTimeout(r, 500));
-  await pg.evaluate(() => {
+  await pg.evaluate((d) => {
     const set = (n, v) => { const e = document.querySelector(`input[name=${n}]`); if (e) { e.value = v; e.dispatchEvent(new Event('input', {bubbles: true})); } };
-    set('internal_port', '8080'); set('custom_domain', 'hata.bothost.tech'); set('main_file', 'main.py');
-  });
+    set('internal_port', '8080'); set('custom_domain', d); set('main_file', 'main.py');
+  }, DOMAIN);
   const state = await pg.evaluate(() => ({
     env: [...document.querySelectorAll('input[name="env_keys[]"]')].map(x => x.value),
     vals: [...document.querySelectorAll('input[name="env_values[]"]')].map(x => x.value.length),

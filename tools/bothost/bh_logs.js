@@ -5,7 +5,7 @@ if (fs.existsSync(envPath)) for (const l of fs.readFileSync(envPath, 'utf8').rep
   const i = l.indexOf('='); if (i > 0 && !process.env[l.slice(0, i)]) process.env[l.slice(0, i)] = l.slice(i + 1);
 }
 const {open} = require('C:/Users/USER/TgMirror/tools/bothost/bhlib.js');
-const ID = 'bot_1794611302_4543_palfboom';
+const ID = process.env.BOT_ID || 'bot_1794611302_4543_palfboom';
 (async () => {
   const {b, pg} = await open();
   pg.on('dialog', async d => { await d.accept(); });
