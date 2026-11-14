@@ -68,7 +68,7 @@ async def me(request):
     with db.connect(request.app["cfg"].db_path) as con:
         names = {r["uid"]: r["name"] for r in con.execute("SELECT uid, name FROM users")}
     cfg = request.app["cfg"]
-    return web.json_response({"uid": uid, "names": {str(u): names.get(u, str(u)) for u in cfg.allowed},
+    return web.json_response({"uid": uid, "names": {str(u): names.get(u, "Друг") for u in cfg.allowed},
                               "screen_url": cfg.screen_url})
 
 
