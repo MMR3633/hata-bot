@@ -13,7 +13,7 @@ const [id, act] = process.argv.slice(2);
   if (act === 'list') {
     console.log(await pg.evaluate(() => Object.keys(window).filter(k => typeof window[k] === 'function' && /bot|Bot/.test(k)).join(' ')));
   } else {
-    const fn = {stop: 'stopBot', start: 'startBot', restart: 'restartBot', update: 'updateBot'}[act];
+    const fn = {delete: 'deleteBot', stop: 'stopBot', start: 'startBot', restart: 'restartBot', update: 'updateBot'}[act];
     console.log(await pg.evaluate((f, i) => { if (typeof window[f] !== 'function') return 'нет функции ' + f; window[f](i); return 'вызвано ' + f; }, fn, id));
     await new Promise(r => setTimeout(r, 8000));
   }

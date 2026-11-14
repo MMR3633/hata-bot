@@ -5,3 +5,4 @@ data/
 .venv/
 node_modules/
 
+deploy_screen/
