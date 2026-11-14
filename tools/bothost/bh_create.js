@@ -16,7 +16,7 @@ const PRESETS = {
       ['PORT', '8080'], ['PUBLIC_URL', 'https://hata.bothost.tech']],
   },
   'hata-screen': {
-    git: 'https://github.com/MMR3633/hata-screen.git', branch: 'main',
+    git: 'https://github.com/MMR3633/hata-screen.git', branch: 'main', docker: true,
     envs: [['ALLOWED_IDS', E.ALLOWED_IDS], ['PORT', '8080']],
   },
 };
@@ -61,7 +61,11 @@ const DOMAIN = NAME + '.bothost.tech';
     const set = (n, v) => { const e = document.querySelector(`input[name=${n}]`); if (e) { e.value = v; e.dispatchEvent(new Event('input', {bubbles: true})); } };
     set('internal_port', '8080'); set('custom_domain', d); set('main_file', 'main.py');
   }, DOMAIN);
+  if (P.docker) {
+    await pg.evaluate(() => { const c = document.querySelector('input[name=use_custom_dockerfile]'); if (c && !c.checked) c.click(); });
+  }
   const state = await pg.evaluate(() => ({
+    docker: document.querySelector('input[name=use_custom_dockerfile]')?.checked,
     name: document.querySelector('input[name=name]')?.value,
     env: [...document.querySelectorAll('input[name="env_keys[]"]')].map(x => x.value),
     vals: [...document.querySelectorAll('input[name="env_values[]"]')].map(x => x.value.length),
