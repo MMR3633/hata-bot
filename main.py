@@ -36,8 +36,11 @@ async def main():
               agent_token=settings.AGENT_TOKEN, yt_key=settings.YT_API_KEY, screen_url=settings.SCREEN_URL)
     runner = web.AppRunner(make_app(cfg))
     await runner.setup()
-    await web.TCPSite(runner, "0.0.0.0", settings.PORT).start()
-    log.info("веб слушает :%s, доступ: %s", settings.PORT, sorted(settings.ALLOWED_IDS))
+    # bothost иногда переводит веб на 3000 после перезапуска, поэтому слушаем все порты сразу
+    ports = sorted({settings.PORT, 8080, 3000})
+    for port in ports:
+        await web.TCPSite(runner, "0.0.0.0", port).start()
+    log.info("веб слушает %s, доступ: %s", ports, sorted(settings.ALLOWED_IDS))
     session = AiohttpSession(proxy=settings.PROXY) if settings.PROXY else None
     bot = Bot(settings.BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
