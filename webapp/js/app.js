@@ -4,6 +4,7 @@ import * as duel from './duel.js';
 import * as watch from './watch.js';
 import * as mc from './mc.js';
 import * as stats from './stats.js';
+import * as screen from './screen.js';
 
 const tg = window.Telegram?.WebApp;
 const $ = s => document.querySelector(s);
@@ -93,8 +94,11 @@ function renderPresence() {
   }
 }
 
-const modules = {duel, watch, mc, stats};
+const modules = {duel, watch, screen, mc, stats};
+let current = null;
 function go(tab) {
+  if (current && current !== tab) modules[current].hide?.();
+  current = tab;
   document.querySelectorAll('.tab').forEach(s => { s.hidden = s.dataset.tab !== tab; });
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.go === tab));
   modules[tab].show?.();
@@ -110,6 +114,7 @@ async function boot() {
     ctx.token = data.token;
     const me = await ctx.api('/api/me');
     ctx.me = me.uid; Object.assign(ctx.names, me.names);
+    ctx.screenUrl = me.screen_url || '';
   } catch (e) {
     $('#gate-msg').textContent = e.message;
     return;

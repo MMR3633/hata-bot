@@ -1,0 +1,17 @@
+.sc-tab { padding-top: 10px; }
+.sc-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.sc-addr { flex: 1; min-width: 0; }
+.sc-addr .input { padding: 9px 12px; font-size: 14px; }
+.sc-ic { flex: none; width: 40px; height: 40px; border: 0; border-radius: 12px; background: var(--panel-2); font-size: 20px; line-height: 1; }
+.sc-ic:active { transform: scale(.94); }
+.sc-stage { display: flex; justify-content: center; }
+.sc-screen { position: relative; border-radius: 18px; overflow: hidden; background: #000; border: 1px solid var(--line);
+  box-shadow: 0 12px 40px #0008; touch-action: none; user-select: none; -webkit-user-select: none; }
+.sc-screen img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+.sc-msg { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 20px;
+  color: var(--muted); background: var(--panel); font-size: 14px; }
+.sc-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.sc-tools .btn { padding: 9px 12px; }
+.sc-viewers { font-size: 12px; margin-left: auto; }
+.sc-kbd { position: fixed; left: -9999px; top: 0; opacity: 0; width: 1px; height: 1px; }
+.sc-note { font-size: 12px; margin-top: 8px; }

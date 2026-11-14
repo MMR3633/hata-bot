@@ -33,7 +33,7 @@ async def setup_bot(bot):
 
 async def main():
     cfg = Cfg(token=settings.BOT_TOKEN, allowed=settings.ALLOWED_IDS, db_path=settings.DB_PATH,
-              agent_token=settings.AGENT_TOKEN, yt_key=settings.YT_API_KEY)
+              agent_token=settings.AGENT_TOKEN, yt_key=settings.YT_API_KEY, screen_url=settings.SCREEN_URL)
     runner = web.AppRunner(make_app(cfg))
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", settings.PORT).start()

@@ -22,6 +22,7 @@ class Cfg:
     agent_token: str = ""
     yt_key: str = ""
     duel_seconds: int = 180
+    screen_url: str = ""
     names: dict = field(default_factory=dict)
 
 
@@ -66,7 +67,9 @@ async def me(request):
     uid = _uid(request)
     with db.connect(request.app["cfg"].db_path) as con:
         names = {r["uid"]: r["name"] for r in con.execute("SELECT uid, name FROM users")}
-    return web.json_response({"uid": uid, "names": {str(u): names.get(u, str(u)) for u in request.app["cfg"].allowed}})
+    cfg = request.app["cfg"]
+    return web.json_response({"uid": uid, "names": {str(u): names.get(u, str(u)) for u in cfg.allowed},
+                              "screen_url": cfg.screen_url})
 
 
 async def stats(request):
