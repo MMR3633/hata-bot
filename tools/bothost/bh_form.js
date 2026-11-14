@@ -7,7 +7,7 @@ if (fs.existsSync(envPath)) for (const l of fs.readFileSync(envPath, 'utf8').rep
 const {open} = require('C:/Users/USER/TgMirror/tools/bothost/bhlib.js');
 (async () => {
   const {b, pg} = await open();
-  await pg.goto('https://bothost.ru/create-bot.php', {waitUntil: 'networkidle2', timeout: 60000});
+  await pg.goto('https://bothost.ru/' + (process.argv[2] || 'create-bot.php'), {waitUntil: 'networkidle2', timeout: 60000});
   const fields = await pg.evaluate(() => [...document.querySelectorAll('input,select,textarea')].map(e => {
     const lab = e.closest('label')?.innerText || document.querySelector(`label[for="${e.id}"]`)?.innerText || '';
     const opts = e.tagName === 'SELECT' ? [...e.options].map(o => o.value).join('/') : '';

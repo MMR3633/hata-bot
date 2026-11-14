@@ -24,4 +24,4 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", BASE / "data"))
 DB_PATH = DATA_DIR / "hata.db"
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")
 PROXY = os.environ.get("TG_PROXY", "")
-SCREEN_URL = os.environ.get("SCREEN_URL", "https://hata-screen.bothost.tech").rstrip("/")
+SCREEN_URL = os.environ.get("SCREEN_URL", "https://hata-tv.bothost.tech").rstrip("/")
