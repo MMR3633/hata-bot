@@ -287,7 +287,17 @@ def make_app(token, allowed):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     from hub import settings
-    web.run_app(make_app(settings.BOT_TOKEN, settings.ALLOWED_IDS), host="0.0.0.0", port=settings.PORT)
+
+    async def serve():
+        runner = web.AppRunner(make_app(settings.BOT_TOKEN, settings.ALLOWED_IDS))
+        await runner.setup()
+        # как у хаба: bothost может перевести веб на 3000
+        for port in sorted({settings.PORT, 8080, 3000}):
+            await web.TCPSite(runner, "0.0.0.0", port).start()
+        log.info("общий браузер слушает %s", sorted({settings.PORT, 8080, 3000}))
+        await asyncio.Event().wait()
+
+    asyncio.run(serve())
 
 
 if __name__ == "__main__":
