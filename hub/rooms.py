@@ -2,8 +2,9 @@ import asyncio
 import random
 import time
 
-from . import db
+from . import db, game
 from .duel_engine import Game
+
 
 DUEL_SECONDS = 180
 CHAT_KEEP = 50
@@ -29,8 +30,10 @@ class Duel:
 class Hub:
     """Одна общая комната на двоих: присутствие, дуэль, кино, чат."""
 
-    def __init__(self, db_path, duel_seconds=DUEL_SECONDS):
+    def __init__(self, db_path, duel_seconds=DUEL_SECONDS, players=()):
         self.db_path = db_path
+        self.players = sorted(players)
+        self.table = game.Table(db_path)
         self.duel_seconds = duel_seconds
         self.sockets = {}
         self.names = {}
@@ -59,7 +62,7 @@ class Hub:
         self.sockets.setdefault(uid, set()).add(ws)
         await ws.send_json({"t": "state", "now": time.time(), "me": uid, "names": self.names_view(),
                             "online": self.online(), "ready": sorted(self.ready), "watch": self.watch,
-                            "chat": self.chat, "duel": self.duel.view(uid) if self.duel else None})
+                            "chat": self.chat, "game": self.table.view(), "duel": self.duel.view(uid) if self.duel else None})
         await self.broadcast({"t": "presence", "online": self.online(), "names": self.names_view()})
 
     async def leave(self, uid, ws):
@@ -184,6 +187,48 @@ class Hub:
     async def on_react(self, uid, msg):
         if msg.get("emoji") in REACTIONS:
             await self.broadcast({"t": "react", "uid": uid, "emoji": msg["emoji"]})
+
+    # ---------- игра на двоих ----------
+
+    async def game_state(self, extra=None):
+        await self.broadcast({"t": "game", "now": time.time(), "game": self.table.view(), **(extra or {})})
+
+    async def on_game_kinds(self, uid, msg):
+        kinds = msg.get("kinds")
+        if isinstance(kinds, list):
+            self.table.set_kinds([str(k) for k in kinds])
+            await self.game_state()
+
+    async def on_game_spin(self, uid, msg):
+        spin = self.table.do_spin(uid, self.players)
+        if spin is None:
+            await self.send(uid, {"t": "game_empty"})
+            return
+        await self.game_state({"event": "spin", "by": uid})
+
+    async def on_game_other(self, uid, msg):
+        if self.table.do_other(uid) is None:
+            await self.send(uid, {"t": "game_empty"})
+            return
+        await self.game_state({"event": "other", "by": uid})
+
+    async def on_game_coin(self, uid, msg):
+        self.table.do_coin(self.players)
+        await self.game_state({"event": "coin", "by": uid})
+
+    async def on_game_dice(self, uid, msg):
+        self.table.do_dice(self.players)
+        await self.game_state({"event": "dice", "by": uid})
+
+    async def on_game_pass(self, uid, msg):
+        self.table.pass_turn(self.players)
+        await self.game_state({"event": "pass", "by": uid})
+
+    async def on_game_reset(self, uid, msg):
+        with db.connect(self.db_path) as con:
+            game.reset(con)
+        self.table.card = None
+        await self.game_state({"event": "reset", "by": uid})
 
     async def on_ping(self, uid, msg):
         await self.send(uid, {"t": "pong", "now": time.time(), "id": msg.get("id")})

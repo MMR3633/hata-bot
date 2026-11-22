@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS agent_cmds (
     taken REAL,
     result TEXT
 );
+CREATE TABLE IF NOT EXISTS game_cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS game_used (
+    card_id INTEGER PRIMARY KEY,
+    at REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS game_meta (
+    k TEXT PRIMARY KEY,
+    v TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS agent_state (
     k TEXT PRIMARY KEY,
     v TEXT NOT NULL,
@@ -51,3 +65,5 @@ def init(path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with connect(path) as con:
         con.executescript(SCHEMA)
+        from . import game
+        game.seed(con)

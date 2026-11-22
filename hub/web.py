@@ -7,7 +7,7 @@ from pathlib import Path
 
 from aiohttp import WSMsgType, web
 
-from . import agent_api, auth, db, search
+from . import agent_api, auth, db, game, search
 from .rooms import Hub
 
 WEBAPP = Path(__file__).resolve().parent.parent / "webapp"
@@ -122,6 +122,59 @@ async def mc_status(request):
         return web.json_response(agent_api.read_status(con))
 
 
+async def game_cards(request):
+    _uid(request)
+    with db.connect(request.app["cfg"].db_path) as con:
+        return web.json_response({"cards": game.list_cards(con), "kinds": game.KINDS})
+
+
+async def _card_body(request):
+    try:
+        body = await request.json()
+    except ValueError:
+        raise web.HTTPBadRequest(text="плохой запрос")
+    return body if isinstance(body, dict) else {}
+
+
+async def game_add(request):
+    _uid(request)
+    body = await _card_body(request)
+    texts = body.get("texts") if isinstance(body.get("texts"), list) else [body.get("text")]
+    kind = str(body.get("kind"))
+    if kind not in game.KINDS:
+        raise web.HTTPBadRequest(text="нет такого вида")
+    with db.connect(request.app["cfg"].db_path) as con:
+        ids = game.add_cards(con, kind, texts[:300])
+    if not ids:
+        raise web.HTTPBadRequest(text="пустой текст")
+    await request.app["hub"].game_state()
+    return web.json_response({"ids": ids})
+
+
+async def game_edit(request):
+    _uid(request)
+    body = await _card_body(request)
+    try:
+        with db.connect(request.app["cfg"].db_path) as con:
+            ok = game.edit_card(con, int(request.match_info["cid"]), str(body.get("kind")), body.get("text"))
+    except ValueError:
+        raise web.HTTPBadRequest(text="пустой текст")
+    if not ok:
+        raise web.HTTPNotFound(text="нет карточки")
+    await request.app["hub"].game_state()
+    return web.json_response({"ok": True})
+
+
+async def game_delete(request):
+    _uid(request)
+    with db.connect(request.app["cfg"].db_path) as con:
+        ok = game.delete_card(con, int(request.match_info["cid"]))
+    if not ok:
+        raise web.HTTPNotFound(text="нет карточки")
+    await request.app["hub"].game_state()
+    return web.json_response({"ok": True})
+
+
 async def agent_poll(request):
     if not _is_agent(request):
         raise web.HTTPUnauthorized()
@@ -194,7 +247,7 @@ def make_app(cfg):
     db.init(cfg.db_path)
     app = web.Application(middlewares=[no_cache_static], client_max_size=64 * 1024)
     app["cfg"] = cfg
-    app["hub"] = Hub(cfg.db_path, cfg.duel_seconds)
+    app["hub"] = Hub(cfg.db_path, cfg.duel_seconds, players=cfg.allowed)
     app["agent_wake"] = asyncio.Event()
     app.router.add_get("/", index)
     app.router.add_get("/health", health)
@@ -204,6 +257,10 @@ def make_app(cfg):
     app.router.add_get("/api/search", do_search)
     app.router.add_post("/api/mc/cmd", mc_cmd)
     app.router.add_get("/api/mc/status", mc_status)
+    app.router.add_get("/api/game/cards", game_cards)
+    app.router.add_post("/api/game/cards", game_add)
+    app.router.add_post(r"/api/game/cards/{cid:\d+}", game_edit)
+    app.router.add_delete(r"/api/game/cards/{cid:\d+}", game_delete)
     app.router.add_get("/api/agent/poll", agent_poll)
     app.router.add_post("/api/agent/status", agent_status)
     app.router.add_get("/ws", ws_handler)

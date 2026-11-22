@@ -42,7 +42,7 @@ body.offline .brand::after { content: " · нет связи"; color: var(--rose
 
 .tab { padding: 14px 16px; max-width: 720px; margin: 0 auto; }
 
-.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(5, 1fr);
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(6, 1fr);
   height: calc(var(--tabs-h) + var(--safe-b)); padding-bottom: var(--safe-b);
   background: rgba(27, 29, 37, .96); backdrop-filter: blur(12px); border-top: 1px solid var(--line); }
 .tabs button { background: none; border: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;

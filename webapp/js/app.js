@@ -5,6 +5,7 @@ import * as watch from './watch.js';
 import * as mc from './mc.js';
 import * as stats from './stats.js';
 import * as screen from './screen.js';
+import * as game from './game.js';
 
 const tg = window.Telegram?.WebApp;
 const $ = s => document.querySelector(s);
@@ -94,7 +95,7 @@ function renderPresence() {
   }
 }
 
-const modules = {duel, watch, screen, mc, stats};
+const modules = {duel, game, watch, screen, mc, stats};
 let current = null;
 function go(tab) {
   if (current && current !== tab) modules[current].hide?.();
