@@ -12,7 +12,7 @@ def test_seed_once_and_counts(tmp_path):
         cards = game.list_cards(con)
         assert len(cards) == len(game_seed.cards())
         lft, total = game.left(con)
-        assert total["q"] > 20 and total["a"] >= 4 and total["x"] == 15
+        assert total == {"q": 47, "a": 4}
         for c in cards:
             game.delete_card(con, c["id"])
     db.init(path)
@@ -25,12 +25,12 @@ def test_no_repeats_until_reset(tmp_path):
     db.init(path)
     rng = random.Random(1)
     with db.connect(path) as con:
-        n = game.left(con)[1]["x"]
-        seen = [game.draw(con, "x", rng)["id"] for _ in range(n)]
+        n = game.left(con)[1]["q"]
+        seen = [game.draw(con, "q", rng)["id"] for _ in range(n)]
         assert len(set(seen)) == n
-        assert game.draw(con, "x", rng) is None
+        assert game.draw(con, "q", rng) is None
         game.reset(con)
-        assert game.draw(con, "x", rng) is not None
+        assert game.draw(con, "q", rng) is not None
 
 
 def test_table_spin_respects_kinds_and_empty(tmp_path):
@@ -83,10 +83,10 @@ async def test_game_over_ws_and_cards_api(client):
     assert len(ids) == 2
     seed_a = sum(1 for k, _ in game_seed.cards() if k == "a")
     assert (await recv_until(b, "game"))["game"]["total"]["a"] == seed_a + 2
-    r = await client.post(f"/api/game/cards/{ids[0]}", json={"kind": "x", "text": "Новый текст"}, headers=h1)
+    r = await client.post(f"/api/game/cards/{ids[0]}", json={"kind": "q", "text": "Новый текст"}, headers=h1)
     assert r.status == 200
     cards = (await (await client.get("/api/game/cards", headers=h1)).json())["cards"]
-    assert any(c["id"] == ids[0] and c["kind"] == "x" and c["text"] == "Новый текст" for c in cards)
+    assert any(c["id"] == ids[0] and c["kind"] == "q" and c["text"] == "Новый текст" for c in cards)
     assert (await client.post("/api/game/cards", json={"kind": "zz", "text": "x"}, headers=h1)).status == 400
     assert (await client.delete(f"/api/game/cards/{ids[1]}", headers=h1)).status == 200
     assert (await client.delete(f"/api/game/cards/{ids[1]}", headers=h1)).status == 404
@@ -110,3 +110,24 @@ async def test_game_over_ws_and_cards_api(client):
     assert ga["game"]["card"]["for"] == gb["game"]["turn"]
     await a.close()
     await b.close()
+
+
+def test_old_spicy_kind_merges_into_questions(tmp_path):
+    path = tmp_path / "g.db"
+    db.init(path)
+    with db.connect(path) as con:
+        con.execute("INSERT INTO game_cards (kind, text, created) VALUES ('x', 'старый 18+', 0)")
+    db.init(path)
+    with db.connect(path) as con:
+        assert {c["kind"] for c in game.list_cards(con)} == {"q", "a"}
+        assert game.left(con)[1] == {"q": 48, "a": 4}
+
+
+async def test_agent_adds_cards_without_duplicates(client):
+    from tests.test_web import AGENT
+    h = {"Authorization": f"Bearer {AGENT}"}
+    assert (await client.post("/api/agent/game_cards", json={"kind": "a", "texts": ["Раз"]})).status == 401
+    r = await client.post("/api/agent/game_cards", json={"kind": "a", "texts": ["Раз", "Два"]}, headers=h)
+    assert len((await r.json())["ids"]) == 2
+    r = await client.post("/api/agent/game_cards", json={"kind": "a", "texts": ["Раз", "Три"]}, headers=h)
+    assert len((await r.json())["ids"]) == 1

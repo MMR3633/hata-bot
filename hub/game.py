@@ -3,12 +3,13 @@ import time
 
 from . import db, game_seed
 
-KINDS = {"q": "Вопрос", "a": "Действие", "x": "18+"}
+KINDS = {"q": "Вопрос", "a": "Действие"}
 SECTORS = 8
 MAX_TEXT = 600
 
 
 def seed(con):
+    con.execute("UPDATE game_cards SET kind = 'q' WHERE kind NOT IN (%s)" % ",".join(f"'{k}'" for k in KINDS))
     if con.execute("SELECT 1 FROM game_meta WHERE k = 'seeded'").fetchone():
         return
     now = time.time()

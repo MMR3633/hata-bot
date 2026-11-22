@@ -192,6 +192,21 @@ async def agent_poll(request):
             pass
 
 
+async def agent_game_cards(request):
+    if not _is_agent(request):
+        raise web.HTTPUnauthorized()
+    body = await _card_body(request)
+    kind = str(body.get("kind"))
+    texts = body.get("texts") if isinstance(body.get("texts"), list) else []
+    if kind not in game.KINDS:
+        raise web.HTTPBadRequest(text="нет такого вида")
+    with db.connect(request.app["cfg"].db_path) as con:
+        have = {r["text"] for r in con.execute("SELECT text FROM game_cards")}
+        ids = game.add_cards(con, kind, [t for t in texts[:300] if " ".join(str(t).split()) not in have])
+    await request.app["hub"].game_state()
+    return web.json_response({"ids": ids})
+
+
 async def agent_status(request):
     if not _is_agent(request):
         raise web.HTTPUnauthorized()
@@ -263,6 +278,7 @@ def make_app(cfg):
     app.router.add_delete(r"/api/game/cards/{cid:\d+}", game_delete)
     app.router.add_get("/api/agent/poll", agent_poll)
     app.router.add_post("/api/agent/status", agent_status)
+    app.router.add_post("/api/agent/game_cards", agent_game_cards)
     app.router.add_get("/ws", ws_handler)
     app.router.add_get("/shapes.json", shapes)
     app.router.add_static("/js/", WEBAPP / "js")

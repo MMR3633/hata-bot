@@ -5,7 +5,6 @@ let cards = [], filter = 'q', editing = null;
 const KIND = {
   q: {name: 'Вопрос', many: 'Вопросы', icon: '💬'},
   a: {name: 'Действие', many: 'Действия', icon: '⚡'},
-  x: {name: '18+', many: '18+', icon: '🔥'},
 };
 const SPIN_MS = 4600;
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));

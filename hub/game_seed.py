@@ -61,6 +61,6 @@ SPICY = """
 
 def cards():
     out = []
-    for kind, block in (("q", QUESTIONS), ("a", ACTIONS), ("x", SPICY)):
+    for kind, block in (("q", QUESTIONS), ("a", ACTIONS), ("q", SPICY)):
         out += [(kind, line.strip()) for line in block.strip().splitlines() if line.strip()]
     return out
